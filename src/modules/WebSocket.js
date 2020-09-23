@@ -10,10 +10,11 @@ class WebSocket {
     initHandler() {
         this.io.on('connection', async (socket) => {
 
-                console.log('Connection...');
+                console.log(`Connected: ${socket.handshake.address}`);
 
                 socket.on('disconnect', () => {
-
+                    console.log(`Disconnected: ${socket.handshake.address}`);
+                    delete this.reg[ socket.uuid ];
                 });
 
                 socket.getData = () => {
@@ -24,16 +25,20 @@ class WebSocket {
                     });
                 };
 
+                socket.putData = (chunk) => {
+                        socket.emit('putData', chunk);
+                };
+
                 socket.on('register', async (data, cb) => {
-                    console.log('reg: ', data.uuid);
-                    this.reg[data.uuid] = {
-                        socket: socket,
-                        status: 0,
-                        size: data.size
-                    };
-                    cb(
+                    console.log('reg: ', data);
+                    socket.uuid = data.uuid;
+                    data.status = 0;
+                    data.socket = socket;
+                    data.ip = socket.handshake.address;
+                    this.reg[data.uuid] = data;
+                    cb( null,
                         {
-                            url: 'http://mc.sui.li:807/' + data.uuid,
+                            url: 'http://mc.sui.li:808/' + data.uuid,
                         }
                     );
                 });
