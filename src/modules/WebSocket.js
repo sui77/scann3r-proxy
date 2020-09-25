@@ -1,5 +1,7 @@
 const socketIo = require('socket.io');
 
+
+
 class WebSocket {
     constructor(webserver, reg) {
         this.reg = reg;
@@ -17,32 +19,36 @@ class WebSocket {
                     delete this.reg[ socket.uuid ];
                 });
 
-                socket.getData = () => {
+                socket.getData = (uuid) => {
                     return new Promise((resolve, reject) => {
-                        socket.emit('getData', (data) => {
+                        socket.emit('getData', uuid, (data) => {
                             resolve(data);
                         });
                     });
                 };
 
-                socket.putData = (chunk) => {
-                        socket.emit('putData', chunk);
+                socket.putData = (uuid, size, chunk) => {
+                    console.log(uuid, size);
+                        socket.emit('putData', uuid, size, chunk);
                 };
 
-                socket.on('register', async (data, cb) => {
-                    console.log('reg: ', data);
-                    socket.uuid = data.uuid;
-                    data.status = 0;
-                    data.socket = socket;
-                    data.ip = socket.handshake.address;
-                    this.reg[data.uuid] = data;
+                socket.on('register', async (uuid, size, cb) => {
+                    let item = {
+                        uuid: uuid,
+                        size: size,
+                        socket: socket,
+                        timeCreated: new Date() / 1000,
+                        status: 0,
+                        ip: socket.handshake.address,
+                    };
+                    this.reg[uuid] = item;
                     cb( null,
                         {
-                            url: 'http://mc.sui.li:808/' + data.uuid,
+                            url: 'http://mc.sui.li:808/' + uuid,
+                            expires: 60*3
                         }
                     );
                 });
-
             }
         );
 

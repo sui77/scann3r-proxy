@@ -6,6 +6,6 @@ const reg = {
 };
 
 (async () => {
-    const webServer = new WebServer(807, reg);
+    const webServer = new WebServer(808, reg);
     const webSocket = new WebSocket(webServer.getServer(), reg);
 })();
