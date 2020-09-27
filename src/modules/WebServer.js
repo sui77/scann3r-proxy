@@ -1,8 +1,8 @@
 const http = require('http');
 
 class WebServer {
-    constructor(port, reg) {
-        this.reg = reg;
+    constructor(config, reg) {
+        const registeredItems = config.registeredItems;
         this.server = http.createServer(async (req, res) => {
                 const {method, url, headers } = req;
                 let uuid = url.replace(/^\//, '');
@@ -15,6 +15,7 @@ class WebServer {
                     }
                     res.end();
                 });
+
                 req.on('end', function () {
                     console.log("END");
                     if (req.wsocket != null) {
@@ -23,20 +24,20 @@ class WebServer {
                 });
 
 
-                if (typeof reg[uuid] != 'undefined' && method == "GET" && reg[uuid].status == 0) {
-                    reg[uuid].status = 1;
+                if (typeof registeredItems[uuid] != 'undefined' && method == "GET" && registeredItems[uuid].status == 0) {
+                    registeredItems[uuid].status = 1;
                     res.writeHead(200, {
                         'Content-Type': 'application/zip',
                         'Content-Disposition': 'attachment; filename=images.zip',
-                        'Content-Length': reg[uuid].size,
-                        'X-Forwarded-For': reg[uuid].ip,
+                        'Content-Length': registeredItems[uuid].size,
+                        'X-Forwarded-For': registeredItems[uuid].ip,
                     });
                     res.flushHeaders();
                     let byteCount = 0;
                     try {
                         let bytes = '';
                         do {
-                            bytes = await reg[uuid].socket.getData(uuid);
+                            bytes = await registeredItems[uuid].socket.getData(uuid);
                             console.log('BYTES READ', bytes.bytesRead);
                             await res.write(bytes.buffer.slice(0, bytes.bytesRead));
                             console.log("written");
@@ -47,13 +48,13 @@ class WebServer {
                         console.log(e.message);
                         res.end();
                     }
-                } else if (typeof reg[uuid] != 'undefined' && method == "PUT" && reg[uuid].status == 1) {
-                    reg[uuid].status = 2;
-                    req.wsocket =  reg[uuid].socket;
+                } else if (typeof registeredItems[uuid] != 'undefined' && method == "PUT" && registeredItems[uuid].status == 1) {
+                    registeredItems[uuid].status = 2;
+                    req.wsocket =  registeredItems[uuid].socket;
 
-                    console.log(uuid, typeof reg[uuid].socket.putData);
+                    console.log(uuid, typeof registeredItems[uuid].socket.putData);
                     console.log("POST");
-                } else if (typeof reg[uuid] != 'undefined' && reg[uuid].status >= 2) {
+                } else if (typeof registeredItems[uuid] != 'undefined' && registeredItems[uuid].status >= 2) {
                     res.statusCode = 410;
                     res.setHeader('Content-Type', 'text/html');
                     res.write("410 Gone (This download was available only once.)\n");
@@ -65,7 +66,7 @@ class WebServer {
                     res.end();
                 }
             }
-        ).listen(port);
+        ).listen(config.httpPort);
     }
 
     getServer() {

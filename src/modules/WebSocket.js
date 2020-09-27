@@ -3,8 +3,9 @@ const socketIo = require('socket.io');
 
 
 class WebSocket {
-    constructor(webserver, reg) {
-        this.reg = reg;
+    constructor(config, webserver) {
+        this.config = config;
+        this.registeredItems = config.registeredItems;
         this.io = socketIo(webserver, {path: '/ws'});
         this.initHandler();
     }
@@ -16,7 +17,11 @@ class WebSocket {
 
                 socket.on('disconnect', () => {
                     console.log(`Disconnected: ${socket.handshake.address}`);
-                    delete this.reg[ socket.uuid ];
+                    for (let n in this.registeredItems) {
+                        if (socket.id == this.registeredItems[n].socket.id) {
+                            delete this.registeredItems[n];
+                        }
+                    }
                 });
 
                 socket.getData = (uuid) => {
@@ -29,7 +34,7 @@ class WebSocket {
 
                 socket.putData = (uuid, size, chunk) => {
                     console.log(uuid, size);
-                        socket.emit('putData', uuid, size, chunk);
+                    socket.emit('putData', uuid, size, chunk);
                 };
 
                 socket.on('register', async (uuid, size, cb) => {
@@ -37,21 +42,18 @@ class WebSocket {
                         uuid: uuid,
                         size: size,
                         socket: socket,
-                        timeCreated: new Date() / 1000,
+                        timeCreated: Math.round(new Date() / 1000),
                         status: 0,
                         ip: socket.handshake.address,
                     };
-                    this.reg[uuid] = item;
-                    cb( null,
-                        {
-                            url: 'http://mc.sui.li:808/' + uuid,
-                            expires: 60*3
-                        }
-                    );
+                    this.registeredItems[uuid] = item;
+                    cb(null, {
+                        url: this.config.baseUrl + uuid,
+                        expires: this.config.expires
+                    });
                 });
             }
         );
-
     }
 }
 
